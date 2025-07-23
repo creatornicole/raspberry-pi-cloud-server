@@ -57,7 +57,7 @@
 
 ---
 
-## 🐾 Steps
+## 🐾 Steps to Set-Up NAS
 
 1. Download [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
 2. Backup and format MicroSD
@@ -119,7 +119,61 @@
 15. Reboot the system to check whether the drive is mounted automatically
     ```
 	sudo reboot
+	lsblk
 	```
+16. Create shared folder
+    ```
+	cd ..
+	cd ..
+	cd mnt/mystorage
+	sudo mkdir shared
+	ls
+	```
+17. Grant read and write permissions to all users on the system
+    ```
+	sudo chmod -R 777 /mnt/mystorage/shared
+	```
+18. Install Samba (so that the newly created shared folder can be shared)
+    ```
+	sudo apt install samba samba-common-bin
+	```
+19. Modify the config file of Samba to tell it to shared our folder over the network
+    ```
+	sudo nano /etc/samba/smb.conf
+	```
+	- add to the end of the file
+	  *\[shared\]*
+	  *path=/mnt/mystorage/shared*
+	  *writeable=Yes*
+	  *create mask=0777*
+	  *directory mask=0777*
+	  *public=no*
+	- Strg + X -> Y -> Enter
+20. Restart Samba to load the new configuration
+    ```
+	sudo systemctl restart smbd
+	```
+21. Grant drive access to user
+	- \<username> is your username on the Pi
+	- entering new password will add you as user to Samba
+    ```
+	sudo smbpasswd -a <username>
+	```
+
+
+## 🔗 Connect to NAS
+
+1. Create test file "helloworld.txt"
+   ```
+	cd /mnt/mystorage/shared
+	touch helloworld.txt
+	ls
+	sudo nano helloworld.txt # to add some content
+	```
+2. Windows: go to "This PC" and enter "\\\\\<ip>\shared" -> enter your login credential to **Samba**
+3. Now that we know that everything is working, we can add our Raspberry Pi to our network locations
+	- right click under "This PC" -> add network address -> \\\\\<ip>\shared
+
 
 ---
 
