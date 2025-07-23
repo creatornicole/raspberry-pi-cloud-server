@@ -52,7 +52,7 @@
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | 🧠 Raspberry Pi OS (Lite) | operating system (OS) for the Raspberry Pi                                                                                               |
 | 📂 Samba                  | enables network file sharing; lets you access, upload, and manage files stored on the Raspberry Pi                                       |
-| 🛡️ OpenVPN               | create a secure VPN tunnel; lets you access your Raspberry Pi and NAS from anywhere on the internet as if you were at home               |
+| 🛡️ PiVPN                 | create a secure VPN tunnel; lets you access your Raspberry Pi and NAS from anywhere on the internet as if you were at home               |
 | 🌐 File Browser           | web-based interface; lets yo access, manage, upload, and download files from your Raspberry Pi using just a browser; includes user login |
 
 ---
@@ -161,7 +161,59 @@
 	```
 
 
+---
+
+
+## 🏃‍♀️ Steps to Set-Up VPN
+
+1. Connect to Raspberry Pi over local network using SSH and PuTTY
+2. Install PiVPN
+   ```
+	curl -L https://install.pivpn.io | bash
+	```
+	- set up static IP address?
+		- depends whether you set the IP address of your Pi on your router to static
+		- set to static... answer "\<Yes>", otherwise "\<No>"
+	- choose OpenVPN (space to select) and proceed
+	- port "1194" is the OpenVPN port (choose any other free port number for increased security)
+	- choose "Google" as DNS provider
+	- choose "DNS Entry" (follow before doing so: [Raspberry Pi DDNS Setup Tutorial! (DuckDNS)](https://www.youtube.com/watch?v=s-66gmIHoyE) / written instructions: [How to Setup DuckDNS on a Raspberry Pi](https://www.wundertech.net/how-to-setup-duckdns-on-a-raspberry-pi/))
+	- public DNS name : "\<subdomain>.duckdns.org"
+3. Create a profile
+   ```
+	pivpn add
+	```
+4. See all the profiles that you created
+   ```
+	cd ovpns
+	ls
+	```
+5. Get this profile off your Pi to the device which you want to connect via VPN to your local network
+	- NAS is already set-up: copy ovpn profile to shared folder
+	  ```
+		sudo cp <profile-name>.ovpn /mnt/mystorage/shared
+		```
+	- if not: follow instructions in video 06:13: [OpenVPN Raspberry Pi Setup using PiVPN! (Easy Tutorail)](https://www.youtube.com/watch?v=kLmbgJe1rEU)
+6. Port forward UDP port on router to Raspberry Pi (setup depends on router)
+7. Decide between Split-Tunnel VPN and Full-Tunnel VPN
+	- split-tunnel connection is enough since the purpose is to access our shared Samba folder from outside our network
+	- full-tunnel VPN connection should be used when trying to secure your connection at public Wi-Fi locations
+	- a OpenVPN profile is by default configured as a full-tunnel VPN connection
+	- to make an OpenVPN profile act as split-tunnel VPN add the following two lines to the profile file (where the IP address must correpond to network IP address range)
+	  *route-nopull*
+	  *route 192.168.2.0 255.255.255.0 vpn_gateway*
+<img src="images/split-full-tunnel-vpn-comparison.png" />
+8. Download OpenVPN client software (different for each device)
+	- Windows: [OpenVPN Connect for Windows](https://openvpn.net/client/)
+	- iOS: OpenVPN Connect
+	- Android: OpenVPN für Android
+
+---
+
+
 ## 🔗 Connect to NAS
+
+#### From Inside Your Network
 
 1. Create test file "helloworld.txt"
    ```
@@ -174,19 +226,38 @@
 3. Now that we know that everything is working, we can add our Raspberry Pi to our network locations
 	- right click under "This PC" -> add network address -> \\\\\<ip>\shared
 
+#### From Outside Your Network
+
+= network connection that is external to your local area network (LAN)
+- outside network = network that is external to the immediate network environment in which a device is located
+- secure and reliable option: VPN (Virtual Private Network)
+	- establishes a secure and encrypted connection your device and a remote network over the internet 
+	- allows access to Pi as if you were on the same local network
+	- dynamic DNS (Domain Name System) can be utilized to assign a domain name to Pi's IP address (makes it easier to connect remotely)
+	- consider enabling two-factor authentication to ensure security of remote access
+- ...
+- see "Steps to Set-Up VPN" for enabling VPN to connect from outside your local area network
 
 ---
 
 
 ## 📄 References
 
+NAS:  
 [DIY NAS (Network-Attached Storage) with Raspberry Pi 5](https://www.hackster.io/ElecrowOfficial/diy-nas-network-attached-storage-with-raspberry-pi-5-e91a37)  
 [How to Build Your First NAS! Samba Share Setup Explained](https://www.youtube.com/watch?v=iDruhrG4hSk)  
 
-Maybe also helpful:
-[Build Your Own Homelab NAS with a Raspberry Pi](https://kitemetric.com/blogs/build-your-own-homelab-nas-with-a-raspberry-pi)  
-[How to build a Raspberry Pi NAS](https://www.raspberrypi.com/tutorials/nas-box-raspberry-pi-tutorial/)  
-[Simple NAS server (with external access) with Raspberry Pi](https://hobby-project.com/arduino-raspberry-pi/simple-nas-server-with-external-access-with-raspberry-pi/)  
+VPN:  
+[OpenVPN Raspberry Pi Setup using PiVPN! (Easy Tutorial)](https://www.youtube.com/watch?v=kLmbgJe1rEU)  
+[VPN Server auf dem Raspberry Pi installieren - PiVPN der OpenVPN Client für den Pi](https://www.youtube.com/watch?v=A17sYeDcnws)  
+
+
 [How To Connect To Raspberry Pi From Outside Network](https://www.howto-do.it/how-to-connect-to-raspberry-pi-from-outside-network/#Connecting_to_Raspberry_Pi_using_a_VPN)  
 links to tutorial for VPN
-[Is there an actual safe way to access my NAS from outside of my home Wi-Fi?](https://www.reddit.com/r/synology/comments/otczia/is_there_an_actual_safe_way_to_access_my_nas_from/)
+[Is there an actual safe way to access my NAS from outside of my home Wi-Fi?](https://www.reddit.com/r/synology/comments/otczia/is_there_an_actual_safe_way_to_access_my_nas_from/)  
+
+For upgrading Hardware Set-up: [Build Your Own Homelab NAS with a Raspberry Pi](https://kitemetric.com/blogs/build-your-own-homelab-nas-with-a-raspberry-pi)
+- but will that allow the cooling system to still work?
+- have a look
+For connecting to NAS using iPhone: [How to build a Raspberry Pi NAS](https://www.raspberrypi.com/tutorials/nas-box-raspberry-pi-tutorial/)  
+For adding more than one user: [Simple NAS server (with external access) with Raspberry Pi](https://hobby-project.com/arduino-raspberry-pi/simple-nas-server-with-external-access-with-raspberry-pi/)
