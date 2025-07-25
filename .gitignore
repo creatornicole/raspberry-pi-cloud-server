@@ -1,2 +1,5 @@
 .obsidian/
+env/
+.env
 todo.txt
+.ignore/
