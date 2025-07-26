@@ -5,18 +5,46 @@ import sys
 from datetime import datetime, timedelta
 from typing import Tuple
 from smbclient import listdir, open_file, register_session
+import subprocess
+import time
 
 # load variables from .env into environment
 if not load_dotenv():
     print("\n\033[31m Error: .env not found or failed to load. \033[0m\n")
     sys.exit(1)
 
-# enable VPN
-# TODO: only if needed
-ovpn_config_str = os.getenv("OVPN_CONFIG")
+nas_ip = os.getenv("NASA_REMOTE_IP")
 
+def ensure_nas_connection(ip):
+    def can_reach_nas(ip):
+        result = subprocess.run(["ping", "-n", "1", ip], capture_output=True, text=True, encoding="utf-8", errors="ignore")
+        return result.returncode == 0 # 0 = ping success
+    
+    def connect_to_vpn():
+        ovpn_gui = os.getenv("OVPN_PATH")
+        ovpn_profile = os.getenv("OVPN_CONFIG")
+        subprocess.run([ovpn_gui, "--command", "connect", ovpn_profile])
+    
+    if can_reach_nas(ip):
+        return "local" # NAS in local network
+    
+    print("⚠️ NAS not in local network, connecting to VPN...")
+    connect_to_vpn()
+    time.sleep(5)
 
-sys.exit()
+    return "vpn" if can_reach_nas(ip) else None
+
+status = ensure_nas_connection(nas_ip)
+
+if status == "local":
+    print("✅ NAS reachable")
+elif status == "vpn":
+    print("✅ NAS reachable via VPN")
+else:
+    print("❌ NAS not reachable; VPN not working or NAS offline")
+    sys.exit(1)
+
+#### TO CONTINUE
 
 # connect to Raspberry Pi NAS
 register_session(os.getenv("NASA_REMOTE_IP"), username=os.getenv("SMB_USERNAME"), password=os.getenv("SMB_PWD"))
@@ -111,6 +139,13 @@ for f in files_sorted:
     mod_time = datetime.fromtimestamp(f.stat().st_mtime)
     formatted_time = mod_time.strftime("%d.%m.%Y %H:%M:%S")
     print(formatted_time, f)
+
+#### TODO:
+# shut off pi
+# ...
+# disconnect from VPN
+# close the session
+# ...
 
 
 
