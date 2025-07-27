@@ -1,3 +1,5 @@
+# .\env\Scripts\activate
+
 from pathlib import Path
 from dotenv import load_dotenv
 import os
@@ -7,12 +9,14 @@ from typing import Tuple
 from smbclient import listdir, open_file, register_session
 import subprocess
 import time
+import shutil
 
 # load variables from .env into environment
 if not load_dotenv():
     print("\n\033[31m Error: .env not found or failed to load. \033[0m\n")
     sys.exit(1)
 
+# check NAS connection
 nas_ip = os.getenv("NASA_REMOTE_IP")
 
 def ensure_nas_connection(ip):
@@ -44,12 +48,10 @@ else:
     print("❌ NAS not reachable; VPN not working or NAS offline")
     sys.exit(1)
 
-#### TO CONTINUE
-
 # connect to Raspberry Pi NAS
 register_session(os.getenv("NASA_REMOTE_IP"), username=os.getenv("SMB_USERNAME"), password=os.getenv("SMB_PWD"))
 
-# check defined paths
+# check and get paths for backup
 base_path_str = os.getenv("BASE_PATH")
 shared_path_str = os.getenv("SHARED_PATH")
 
@@ -66,6 +68,7 @@ if not base_path.exists():
     print(f"\n\033[31m Error: The path {base_path} does not exist. \033[0m\n")
     sys.exit(1)
 
+# determine whether monthly backup should be done
 def is_monthly_scheduled() -> bool:
     """
     Determine whether monthly backup should be executed. If not only the weekly
@@ -87,11 +90,11 @@ def get_changes(backup_path: Path, working_path: Path) -> Tuple[str, str, str]:
     """
     backup_files = {
         f.relative_to(backup_path): f.stat().st_mtime
-        for f in backup_path.glob("*") if not f.name.startswith(".")
+        for f in backup_path.rglob("*") if not f.name.startswith(".")
     }
     working_files = {
         f.relative_to(working_path): f.stat().st_mtime
-        for f in working_path.glob("*") if not f.name.startswith(".")
+        for f in working_path.rglob("*") if not f.name.startswith(".")
     }
 
     backup_keys = set(backup_files)
@@ -112,11 +115,36 @@ def perform_monthly_backup(monthly_backup_path: Path, working_path: Path):
 def perform_weekly_backup(weekly_backup_path: Path, working_path: Path):
     pass
 
-added, deleted, modified = get_changes(Path(r"C:\Users\ngott\Code\raspberry-pi-cloud-server\old"), Path(r"C:\Users\ngott\Code\raspberry-pi-cloud-server\new"))
+added, deleted, modified = get_changes(Path(shared_path_str), Path(r"C:\Users\ngott\Studium\21-Bachelor-HSMW\1_digitalBusiness"))
 
-# list content in shared folder
-for filename in listdir(shared_path_str):
-    print(filename)
+deleted_dirs = sorted(
+    (p for p in deleted if p.suffix == ""), # only paths with no suffix = directories
+    key=lambda p: len(p.parts) # sort by number of parts
+)
+
+print("\nDeleted Dirs")
+print(deleted_dirs)
+
+while deleted_dirs:
+    d = deleted_dirs.pop(0) # remove and return one element
+
+    # deleted directory with all of its files and subdirectories
+    shutil.rmtree(Path(shared_path_str) / Path(d))
+
+    # update sets
+    deleted_dirs = [p for p in deleted_dirs if not p.is_relative_to(d)]
+    print(deleted_dirs)
+    deleted = [p for p in deleted if not p.parts[0].startswith(d.name)]
+
+# print("\nAdded:")
+# print(added)
+print()
+print("\nDeleted:")
+print(deleted)
+print()
+# print("\nModified:")
+# print(modified)
+# print()
 
 
 sys.exit()
