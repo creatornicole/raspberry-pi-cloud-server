@@ -115,18 +115,19 @@ def perform_monthly_backup(monthly_backup_path: Path, working_path: Path):
 def perform_weekly_backup(weekly_backup_path: Path, working_path: Path):
     pass
 
-added, deleted, modified = get_changes(Path(shared_path_str), Path(r"C:\Users\ngott\Studium\21-Bachelor-HSMW\1_digitalBusiness"))
+base_path_str = r"C:\Users\ngott\Studium\21-Bachelor-HSMW\1_digitalBusiness"
+added, deleted, modified = get_changes(Path(shared_path_str), Path(base_path_str))
 
-def handle_deletions(deleted):
+def handle_deletions(paths):
     """
     
     """
     # get deleted directories 
     deleted_dirs = sorted(
-        (path for path in deleted if path.suffix == ""), # only paths with no suffix = directories
+        (path for path in paths if path.suffix == ""), # only paths with no suffix = directories
         key=lambda path: len(path.parts) # sort by number of parts to remove directories before subdirectories
     )
-    deleted_files = list(set(deleted) - set(deleted_dirs))
+    deleted_files = list(set(paths) - set(deleted_dirs))
 
     # remove the deleted directories with all of their content
     while deleted_dirs:
@@ -140,15 +141,28 @@ def handle_deletions(deleted):
 
     # remove the deleted files
     for deleted_file in deleted_files:
-        (Path(shared_path_str) / Path(deleted_file)).unlink()
+        (Path(shared_path_str) / Path(deleted_file)).unlink()    
 
-def handle_additions(added):
-    pass
+def handle_additions(paths):
+    """
+    Copies newly added files and ensures that all required directories (including empty ones)
+    are created in the target location.
+    """
+    for p in paths:
+        source = Path(base_path_str) / Path(p)
+        dst_dir = Path(shared_path_str) / Path(p.parent)
 
-def handle_modifications(modified):
+        dst_dir.mkdir(parents=True, exist_ok=True)
+
+        if source.is_file():
+            shutil.copy2(source, dst_dir / p.name)
+
+def handle_modifications(paths):
     pass
 
 handle_deletions(deleted)
+handle_additions(added)
+
 
 sys.exit()
 
