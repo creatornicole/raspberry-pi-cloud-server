@@ -84,7 +84,7 @@ def is_monthly_scheduled() -> bool:
 
 monthly = is_monthly_scheduled()
 
-def get_changes(backup_path: Path, working_path: Path) -> Tuple[str, str, str]:
+def get_changes(backup_path: Path, working_path: Path):
     """
     
     """
@@ -107,7 +107,7 @@ def get_changes(backup_path: Path, working_path: Path) -> Tuple[str, str, str]:
         if backup_files[file] != working_files[file]
     }
     
-    return added, deleted, modified
+    return list(added), list(deleted), list(modified)
 
 def perform_monthly_backup(monthly_backup_path: Path, working_path: Path):
     pass
@@ -117,35 +117,38 @@ def perform_weekly_backup(weekly_backup_path: Path, working_path: Path):
 
 added, deleted, modified = get_changes(Path(shared_path_str), Path(r"C:\Users\ngott\Studium\21-Bachelor-HSMW\1_digitalBusiness"))
 
-deleted_dirs = sorted(
-    (p for p in deleted if p.suffix == ""), # only paths with no suffix = directories
-    key=lambda p: len(p.parts) # sort by number of parts
-)
+def handle_deletions(deleted):
+    """
+    
+    """
+    # get deleted directories 
+    deleted_dirs = sorted(
+        (path for path in deleted if path.suffix == ""), # only paths with no suffix = directories
+        key=lambda path: len(path.parts) # sort by number of parts to remove directories before subdirectories
+    )
+    deleted_files = list(set(deleted) - set(deleted_dirs))
 
-print("\nDeleted Dirs")
-print(deleted_dirs)
+    # remove the deleted directories with all of their content
+    while deleted_dirs:
+        deleted_dir = deleted_dirs.pop(0) # remove and return first element
 
-while deleted_dirs:
-    d = deleted_dirs.pop(0) # remove and return one element
+        # delete directory with all of its files and subdirectories
+        shutil.rmtree(Path(shared_path_str) / Path(deleted_dir))
 
-    # deleted directory with all of its files and subdirectories
-    shutil.rmtree(Path(shared_path_str) / Path(d))
+        # update set (remove all subdirectories from deleted_dirs list)
+        deleted_dirs = [path for path in deleted_dirs if not path.is_relative_to(deleted_dir)]
 
-    # update sets
-    deleted_dirs = [p for p in deleted_dirs if not p.is_relative_to(d)]
-    print(deleted_dirs)
-    deleted = [p for p in deleted if not p.parts[0].startswith(d.name)]
+    # remove the deleted files
+    for deleted_file in deleted_files:
+        (Path(shared_path_str) / Path(deleted_file)).unlink()
 
-# print("\nAdded:")
-# print(added)
-print()
-print("\nDeleted:")
-print(deleted)
-print()
-# print("\nModified:")
-# print(modified)
-# print()
+def handle_additions(added):
+    pass
 
+def handle_modifications(modified):
+    pass
+
+handle_deletions(deleted)
 
 sys.exit()
 
