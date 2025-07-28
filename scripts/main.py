@@ -103,8 +103,15 @@ def get_changes(backup_path: Path, working_path: Path):
     added = working_keys - backup_keys
     deleted = backup_keys - working_keys
     modified = {
-        file for file in backup_keys & working_keys
+        file 
+        for file in backup_keys & working_keys
         if backup_files[file] != working_files[file]
+        # only consider file modications; directory modifications are ignored
+        # reason 1: renaming a directory is already detected as a new and a deleted folder
+        # reason 2: backed-up directories get the backup date as their modification time,
+        #           which is always newer/different from the working directory even if no 
+        #           actual changes were made
+        and (Path(base_path_str) / file).is_file() 
     }
     
     return list(added), list(deleted), list(modified)
@@ -115,7 +122,6 @@ def perform_monthly_backup(monthly_backup_path: Path, working_path: Path):
 def perform_weekly_backup(weekly_backup_path: Path, working_path: Path):
     pass
 
-base_path_str = r"C:\Users\ngott\Studium\21-Bachelor-HSMW\1_digitalBusiness"
 added, deleted, modified = get_changes(Path(shared_path_str), Path(base_path_str))
 
 def handle_deletions(paths):
@@ -138,6 +144,8 @@ def handle_deletions(paths):
 
         # update set (remove all subdirectories from deleted_dirs list)
         deleted_dirs = [path for path in deleted_dirs if not path.is_relative_to(deleted_dir)]
+        # remove all files from deleted_files list that were inside the deleted_dir
+        deleted_files = [path for path in deleted_files if not path.is_relative_to(deleted_dir)]
 
     # remove the deleted files
     for deleted_file in deleted_files:
@@ -149,20 +157,28 @@ def handle_additions(paths):
     are created in the target location.
     """
     for p in paths:
-        source = Path(base_path_str) / Path(p)
+        src = Path(base_path_str) / Path(p)
         dst_dir = Path(shared_path_str) / Path(p.parent)
 
         dst_dir.mkdir(parents=True, exist_ok=True)
 
-        if source.is_file():
-            shutil.copy2(source, dst_dir / p.name)
+        if src.is_file():
+            shutil.copy2(src, dst_dir / p.name)
 
 def handle_modifications(paths):
-    pass
+    """
+    
+    """
+    for p in paths:
+        src = Path(base_path_str) / Path(p)
+        dst = Path(shared_path_str) / Path(p)
+
+        # copy and overwrite existing file
+        shutil.copy2(src, dst)
 
 handle_deletions(deleted)
 handle_additions(added)
-
+handle_modifications(modified)
 
 sys.exit()
 
