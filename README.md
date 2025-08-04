@@ -43,6 +43,7 @@
 - [External Storage (1 TB)](https://www.mediamarkt.de/de/product/_crucial-p3-plus-nvme-m2-2280ss-festplatte-1000-gb-ssd-m2-via-nvme-intern-2817721.html)
 - [Case for SSD](https://www.mediamarkt.de/de/product/_isy-ise-1000-gy-nvme-ssd-gehause-grau-2876271.html)
 - Ethernet Cable
+- [Shelly Plug S MTR Gen3](https://kb.shelly.cloud/knowledge-base/shelly-plug-s-mtr-gen3) (for remote power control)
 
 ---
 
@@ -210,7 +211,6 @@
 
 ---
 
-
 ## 🔗 Connect to NAS
 
 #### From Inside Your Network
@@ -238,6 +238,53 @@
 - ...
 - see "Steps to Set-Up VPN" for enabling VPN to connect from outside your local area network
 
+
+---
+
+## 💡 Remote Power Control with Shelly Plug
+
+#### MQTT
+
+= Message Queuing Telemetry Transport
+- lightweight, publish-subscribe messaging protocol
+- designed for low-bandwidth, high-latency or unreliable networks
+- widely used in IoT applications where devices (e.g. sensors, plugs, thermostats) need to send or receive data efficiently
+- broker needed
+
+| Key Concept | Description                                                                                                                 |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Broker      | central server that manages messages; devices don't talk to each other directly - they go through the broker                |
+| Client      | any device or application that connects to the broker; clients can publish messages or subscribe to topics                  |
+| Topic       | a string like ```home/livingroom/lamp``` that helps organize messages; clients subscribe to topics to receive relevant data |
+| Publish     | client sends a message to a topic                                                                                           |
+| Subscribe   | client tells broker it wants messages from a specific topic                                                                 |
+
+- need to enable MQTT on Shelly Plug
+
+> Once you enable MQTT on your Shelly Plug, MQTT takes over the control - so the Shelly app usually can't control the device at the same time
+
+
+- this means
+	- Python script (here) will control the device
+	- Shelly app can no longer be used to turn it on/off (only in local network)
+	- if you want to control your Shelly Plug via Python and MQTT, you have to accept that the Shelly app won't be able to control the plug (or only very limited)
+	- you can still use the Shelly app for status updates, but control commands must go via MQTT
+- reasons
+	- Shelly disables cloud-based control commands when MQTT control is active to avoid conflicts
+	- MQTT control happens "directly" through your broker to the device
+
+
+#### Setup
+
+| Role       | Device/Software                                                    | Notes                                                                                                   |
+| ---------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Subscriber | Shelly Plug S Gen3                                                 | listens to MQTT commands (e.g. "on"/"off") = subscribes to the topic and siwtches on or off accordingly |
+| Publisher  | Python script on PC                                                | sends/ publishes MQTT messages to a topic to control the plug                                           |
+| Broker     | [HiveMQ Cloud](https://www.hivemq.com/products/mqtt-cloud-broker/) | routes messages between publisher and subscriber                                                        |
+
+#### HiveMQ Cloud as a Cloud Broker
+
+- pretty easy: go to https://www.hivemq.com/index-alt/ -> Click "Start Free" -> "Sign Up Free Now" for the "HiveMQ Cloud" -> Sign Up -> Create Serverless Cluster (it's free!)
 
 ---
 
@@ -286,6 +333,9 @@ NAS:
 VPN:  
 [OpenVPN Raspberry Pi Setup using PiVPN! (Easy Tutorial)](https://www.youtube.com/watch?v=kLmbgJe1rEU)  
 [VPN Server auf dem Raspberry Pi installieren - PiVPN der OpenVPN Client für den Pi](https://www.youtube.com/watch?v=A17sYeDcnws)  
+
+MQTT:  
+[MQTT: Der ultimative Guide für Einsteiger](https://netzwerk-guides.de/mqtt-guide-fuer-einsteiger/)  
 
 
 [How To Connect To Raspberry Pi From Outside Network](https://www.howto-do.it/how-to-connect-to-raspberry-pi-from-outside-network/#Connecting_to_Raspberry_Pi_using_a_VPN)  
