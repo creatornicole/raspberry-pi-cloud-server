@@ -11,6 +11,12 @@ import subprocess
 import time
 import shutil
 from datetime import datetime
+import paho.mqtt.client as mqtt
+import subprocess
+import ssl
+import json
+import requests
+from requests.auth import HTTPBasicAuth
 
 success_symbol = "\u2705"
 err_symbol = "\u274C"
@@ -19,43 +25,85 @@ info_symbol = "\u2139"
 
 # load variables from .env into environment
 if not load_dotenv():
-    print(f"\033[31m {err_symbol} .env not found or failed to load. \033[0m")
-    sys.exit(1)
+    raise EnvironmentError(f"\033[31m {err_symbol} .env not found or failed to load. \033[0m")
 
-# check NAS connection
-nas_ip = os.getenv("NASA_REMOTE_IP")
-
-def ensure_nas_connection(ip):
-    def can_reach_nas(ip):
-        result = subprocess.run(["ping", "-n", "1", ip], capture_output=True, text=True, encoding="utf-8", errors="ignore")
+def connect():
+    """
+    """
+    def is_on_same_network(target_ip: str) -> bool:
+        """
+        """
+        result = subprocess.run(
+            ["ping", "-n", "1", target_ip], 
+            capture_output=True, 
+            text=True, 
+            encoding="utf-8", 
+            errors="ignore"
+        )
         return result.returncode == 0 # 0 = ping success
     
     def connect_to_vpn():
+        """
+        """
         ovpn_gui = os.getenv("OVPN_PATH")
         ovpn_profile = os.getenv("OVPN_CONFIG")
+        if not ovpn_gui or not ovpn_profile:
+            raise EnvironmentError(f"\033[31m {err_symbol} OVPN_PATH or OVPN_CONFIG environment variable not set. \033[0m")
         subprocess.run([ovpn_gui, "--command", "connect", ovpn_profile])
+
+    def turn_on_shelly(ip):
+        url = f"http://{ip}/relay/0?turn=on"
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                print(f"\033[32m {success_symbol} Shelly turned ON successfully \033[0m")
+            else:
+                print(f"\033[31m {err_symbol} Failed to turn on Shelly. Status code: {response.status_code} \033[0m")
+        except requests.RequestException as e:
+            print(f"\033[31m {err_symbol} Error connecting to Shelly: {e} \033[0m")
+        
+    shelly_ip = os.getenv("SHELLY_IP")
+    if not shelly_ip:
+        raise EnvironmentError(f"\033[31m {err_symbol} SHELLY_IP environment variable is not set. \033[0m")
+
+    if is_on_same_network(shelly_ip):
+        status = "local"
+    else:
+        print(f"\033[33m {warning_symbol} NAS not in local network, connecting to VPN... \033[0m")
+        connect_to_vpn()
+        time.sleep(5)
+        status = "vpn" if is_on_same_network(shelly_ip) else "unreachable"
+
+    if status == "unreachable":
+        raise RuntimeError(f"\033[31m {err_symbol} Device still unreachable after VPN connection attempt \033[0m")
     
-    if can_reach_nas(ip):
-        return "local" # NAS in local network
+    shelly_ip = os.getenv("SHELLY_IP")
+    if not shelly_ip:
+        raise EnvironmentError(f"\033[31m {err_symbol} SHELLY_IP environment variable is not set. \033[0m")
     
-    print(f"\033[33m {warning_symbol} NAS not in local network, connecting to VPN... \033[0m")
-    connect_to_vpn()
-    time.sleep(5)
+    turn_on_shelly(shelly_ip)
+    time.sleep(20)
 
-    return "vpn" if can_reach_nas(ip) else None
+    # connect to Raspberry Pi NAS
+    nas_ip = os.getenv("NASA_REMOTE_IP")
+    if not nas_ip:
+        raise EnvironmentError(f"\033[31m {err_symbol} NASA_REMOTE_IP environment variable is not set. \033[0m")
+    nas_username = os.getenv("SMB_USERNAME")
+    if not nas_username:
+        raise EnvironmentError(f"\033[31m {err_symbol} SMB_USERNAME environment variable is not set. \033[0m")
+    nas_pwd = os.getenv("SMB_PWD")
+    if not nas_pwd:
+        raise EnvironmentError(f"\033[31m {err_symbol} SMB_PWD environment variable is not set. \033[0m")
 
-status = ensure_nas_connection(nas_ip)
+    register_session(os.getenv("NASA_REMOTE_IP"), username=nas_username, password=nas_pwd)
 
-if status == "local":
-    print(f"\033[32m {success_symbol} NAS reachable \033[0m")
-elif status == "vpn":
-    print(f"\033[32m {success_symbol} NAS reachable via VPN \033[0m")
-else:
-    print(f"\033[31m {err_symbol} NAS not reachable; VPN not working or NAS offline \033[0m")
-    sys.exit(1)
+    if status == "local":
+        print(f"\033[32m {success_symbol} Registered to NAS \033[0m")
+    elif status == "vpn":
+        print(f"\033[32m {success_symbol} Registered to NAS via VPN \033[0m")
 
-# connect to Raspberry Pi NAS
-register_session(os.getenv("NASA_REMOTE_IP"), username=os.getenv("SMB_USERNAME"), password=os.getenv("SMB_PWD"))
+connect()
+sys.exit()
 
 # check and get paths for backup
 base_path_str = os.getenv("BASE_PATH")
@@ -183,7 +231,7 @@ def perform_backup(backup_path: Path, working_path: Path, monthly_scheduled: boo
     if err_msg_monthly in err_msg:
         new_monthly_backup_path.mkdir(exist_ok=True)
         print(f"{info_symbol} Monthly backup directory set up as {new_monthly_backup_dir}")
-    elif curr_monthly_backup_dir != new_monthly_backup_dir:
+    elif monthly_scheduled and curr_monthly_backup_dir != new_monthly_backup_dir:
         curr_monthly_backup_path = shared_path / curr_monthly_backup_dir
         curr_monthly_backup_path.rename(new_monthly_backup_path)
         print(f"{info_symbol} {curr_monthly_backup_dir} renamed to {new_monthly_backup_dir}")
