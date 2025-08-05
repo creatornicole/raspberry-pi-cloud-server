@@ -4,6 +4,7 @@ from connect import connect
 from datetime import datetime, timedelta
 from disconnect import disconnect
 from dotenv import load_dotenv
+from helpers import raise_env_error
 from load_variables import load_variables
 from pathlib import Path
 from perform_backup import perform_backup
@@ -20,12 +21,8 @@ if not load_dotenv():
 connect()
 
 # prepare for backup
-working_path_str = os.getenv("WORKING_PATH")
-if not working_path_str:
-    raise EnvironmentError(f"\033[31m{err_symbol} WORKING_PATH environment variable is not set \033[0m")
-backup_path_str = os.getenv("BACKUP_PATH")
-if not backup_path_str:
-    raise EnvironmentError(f"\033[31m{err_symbol} BACKUP_PATH environment variable is not set \033[0m")
+(working_path_str := os.getenv("WORKING_PATH")) or raise_env_error("WORKING_PATH")
+(backup_path_str := os.getenv("BACKUP_PATH")) or raise_env_error("BACKUP_PATH")
 
 working_path = Path(working_path_str)
 if not working_path.exists():

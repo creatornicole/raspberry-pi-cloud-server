@@ -1,4 +1,4 @@
-from helpers import is_port_open
+from helpers import is_port_open, raise_env_error
 import os
 import requests
 from smbclient import register_session
@@ -24,10 +24,8 @@ def connect():
     def connect_to_vpn():
         """
         """
-        ovpn_gui = os.getenv("OVPN_PATH")
-        ovpn_profile = os.getenv("OVPN_CONFIG")
-        if not ovpn_gui or not ovpn_profile:
-            raise EnvironmentError(f"\033[31m{err_symbol} OVPN_PATH or OVPN_CONFIG environment variable not set \033[0m")
+        (ovpn_gui := os.getenv("OVPN_PATH")) or raise_env_error("OVPN_PATH")
+        (ovpn_profile := os.getenv("OVPN_CONFIG")) or raise_env_error("OVPN_CONFIG")
         subprocess.run([ovpn_gui, "--command", "connect", ovpn_profile])
 
     def is_shelly_on(ip: str) -> bool:
@@ -59,9 +57,9 @@ def connect():
         
     success_symbol, err_symbol, warning_symbol, info_symbol = load_variables()
 
-    shelly_ip = os.getenv("SHELLY_IP")
-    if not shelly_ip:
-        raise EnvironmentError(f"\033[31m{err_symbol} SHELLY_IP environment variable is not set \033[0m")
+    connect_to_vpn()
+
+    (shelly_ip := os.getenv("SHELLY_IP")) or raise_env_error("SHELLY_IP")
 
     if is_on_same_network(shelly_ip):
         print(f"{info_symbol} NAS in local network")
@@ -75,9 +73,7 @@ def connect():
     if status == "unreachable":
         raise RuntimeError(f"\033[31m{err_symbol} Device still unreachable after VPN connection attempt \033[0m")
     
-    nas_ip = os.getenv("NASA_REMOTE_IP")
-    if not nas_ip:
-        raise EnvironmentError(f"\033[31m{err_symbol} NASA_REMOTE_IP environment variable is not set \033[0m")
+    (nas_ip := os.getenv("NASA_REMOTE_IP")) or raise_env_error("NASA_REMOTE_IP")
     nas_port = 445
 
     if is_shelly_on(shelly_ip):
@@ -98,12 +94,8 @@ def connect():
         raise RuntimeError(f"\033[31m{err_symbol} NAS cannot be reached \033[0m")
 
     # connect to Raspberry Pi NAS
-    nas_username = os.getenv("SMB_USERNAME")
-    if not nas_username:
-        raise EnvironmentError(f"\033[31m{err_symbol} SMB_USERNAME environment variable is not set \033[0m")
-    nas_pwd = os.getenv("SMB_PWD")
-    if not nas_pwd:
-        raise EnvironmentError(f"\033[31m{err_symbol} SMB_PWD environment variable is not set \033[0m")
+    (nas_username := os.getenv("SMB_USERNAME")) or raise_env_error("SMB_USERNAME")
+    (nas_pwd := os.getenv("SMB_PWD")) or raise_env_error("SMB_PWD")
 
     register_session(os.getenv("NASA_REMOTE_IP"), username=nas_username, password=nas_pwd)
 

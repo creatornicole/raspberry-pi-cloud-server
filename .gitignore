@@ -1,4 +1,5 @@
 .obsidian/
 env/
+scripts/__pycache__
 .env
 todo.txt

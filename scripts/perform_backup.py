@@ -1,4 +1,5 @@
 from datetime import datetime
+from helpers import raise_env_error
 from load_variables import load_variables
 from pathlib import Path
 import os
@@ -122,12 +123,8 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
 
     success_symbol, err_symbol, warning_symbol, info_symbol = load_variables()
 
-    prefix = os.getenv("MONTHLY_PREFIX") if perform_monthly_backup else os.getenv("WEEKLY_PREFIX")
-    prefix_env = "MONTHLY_PREFIX" if perform_monthly_backup else "WEEKLY_PREFIX"
-    prefix_name = "monthly" if perform_monthly_backup else "weekly"
-
-    if not prefix:
-        raise EnvironmentError(f"\033[31m{err_symbol} {prefix_env} environment variable is not set \033[0m")
+    prefix_env, prefix_name = ("MONTHLY_PREFIX", "monthly") if perform_monthly_backup else ("WEEKLY_PREFIX", "weekly")
+    (prefix := os.getenv(prefix_env)) or raise_env_error(prefix_env)
     
     create_backup_dir = False
 

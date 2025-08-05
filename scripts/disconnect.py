@@ -1,4 +1,4 @@
-from helpers import is_port_open
+from helpers import is_port_open, raise_env_error
 from load_variables import load_variables
 import os
 import paramiko
@@ -59,16 +59,10 @@ def disconnect():
 
     success_symbol, err_symbol, warning_symbol, info_symbol = load_variables()
 
-    nas_ip = os.getenv("NASA_REMOTE_IP")
-    if not nas_ip:
-        raise EnvironmentError(f"\033[31m{err_symbol} NASA_REMOTE_IP environment variable is not set \033[0m")
+    (nas_ip := os.getenv("NASA_REMOTE_IP")) or raise_env_error("NASA_REMOTE_IP")
     nas_port = 445
-    # nas_username = os.getenv("NASA_USERNAME")
-    # if not nas_username:
-        # raise EnvironmentError(f"\033[31m{err_symbol} NASA_USERNAME environment variable is not set \033[0m")
-    # nas_pwd = os.getenv("NASA_PWD")
-    # if not nas_pwd:
-        # raise EnvironmentError(f"\033[31m{err_symbol} NASA_PWD environment variable is not set \033[0m")
+    (nas_username := os.getenv("NASA_USERNAME")) or raise_env_error("NASA_USERNAME")
+    (nas_pwd := os.getenv("NASA_PWD")) or raise_env_error("NASA_PWD")
 
     # shutdown_pi(nas_ip, nas_username, nas_username)
     print(f"{info_symbol} Waiting for Raspberry Pi to shut down", end="", flush=True)
@@ -84,19 +78,13 @@ def disconnect():
     if is_port_open(nas_ip, nas_port):
         raise RuntimeError(f"\033[31m{err_symbol} NAS cannot be shut down \033[0m")
 
-    shelly_ip = os.getenv("SHELLY_IP")
-    if not shelly_ip:
-        raise EnvironmentError(f"\033[31m{err_symbol}] SHELLY_IP environment variable is not set \033[0m")
+    (shelly_ip := os.getenv("SHELLY_IP")) or raise_env_error("SHELLY_IP")
     
     shutdown_shelly(shelly_ip)
     time.sleep(5)
 
-    ovpn_gui = os.getenv("OVPN_PATH")
-    if not ovpn_gui:
-        raise EnvironmentError(f"\033[31m{err_symbol}] OVPN_PATH environment variable is not set \033[0m")
-    ovpn_profile = os.getenv("OVPN_CONFIG")
-    if not ovpn_profile:
-        raise EnvironmentError(f"\033[31m{err_symbol}] OVPN_CONFIG environment variable is not set \033[0m")
+    (ovpn_gui := os.getenv("OVPN_PATH")) or raise_env_error("OVPN_PATH")
+    (ovpn_profile := os.getenv("OVPN_CONFIG")) or raise_env_error("OVPN_CONFIG")
     
     disconnect_vpn_if_connected(ovpn_gui, ovpn_profile)
 
