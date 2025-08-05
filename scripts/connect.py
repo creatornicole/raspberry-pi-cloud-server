@@ -21,11 +21,9 @@ def connect():
         )
         return result.returncode == 0 # 0 = ping success
     
-    def connect_to_vpn():
+    def connect_to_vpn(ovpn_gui: str, ovpn_profile: str):
         """
         """
-        (ovpn_gui := os.getenv("OVPN_PATH")) or raise_env_error("OVPN_PATH")
-        (ovpn_profile := os.getenv("OVPN_CONFIG")) or raise_env_error("OVPN_CONFIG")
         subprocess.run([ovpn_gui, "--command", "connect", ovpn_profile])
 
     def is_shelly_on(ip: str) -> bool:
@@ -57,8 +55,6 @@ def connect():
         
     success_symbol, err_symbol, warning_symbol, info_symbol = load_variables()
 
-    connect_to_vpn()
-
     (shelly_ip := os.getenv("SHELLY_IP")) or raise_env_error("SHELLY_IP")
 
     if is_on_same_network(shelly_ip):
@@ -66,8 +62,13 @@ def connect():
         status = "local"
     else:
         print(f"\033[33m{warning_symbol} NAS not in local network, connecting to VPN... \033[0m")
-        connect_to_vpn()
+
+        (ovpn_gui := os.getenv("OVPN_PATH")) or raise_env_error("OVPN_PATH")
+        (ovpn_profile := os.getenv("OVPN_CONFIG")) or raise_env_error("OVPN_CONFIG")
+
+        connect_to_vpn(ovpn_gui, ovpn_profile)
         time.sleep(15)
+
         status = "vpn" if is_on_same_network(shelly_ip) else "unreachable"
 
     if status == "unreachable":
@@ -97,7 +98,7 @@ def connect():
     (nas_username := os.getenv("SMB_USERNAME")) or raise_env_error("SMB_USERNAME")
     (nas_pwd := os.getenv("SMB_PWD")) or raise_env_error("SMB_PWD")
 
-    register_session(os.getenv("NASA_REMOTE_IP"), username=nas_username, password=nas_pwd)
+    register_session(nas_ip, username=nas_username, password=nas_pwd)
 
     if status == "local":
         print(f"\033[32m{success_symbol} Registered to NAS \033[0m")
