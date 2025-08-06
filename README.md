@@ -6,11 +6,11 @@ This project implements a personal Network-Attached Storage (NAS) system with se
 ## 📑 Table of Contents
   
 1. [🧭 Project Goals](#-project-goals)
-2. [🔧 Hardware](#hardware)
-3. [⚙️ Software](#software)
-4. [📋 Setup Instructions](#setup-instructions)
-5. [💡 Things to Improve](#things-to-improve)
-6. [📄 References](#references)
+2. [🔧 Hardware](#-hardware)
+3. [⚙️ Software](#-software)
+4. [📋 Setup Instructions](#-setup-instructions)
+5. [💡 Things to Improve](#-things-to-improve)
+6. [📄 References](#-references)
 
 
 ## 🧭 Project Goals
