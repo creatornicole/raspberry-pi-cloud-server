@@ -29,3 +29,6 @@
 	subprocess_run([openvpn.gui, "--command", "disconnect", "client.ovpn"])
 	```
 
+
+## 🔌 Power Control of Shelly Plug Device Using HTTP Requests
+

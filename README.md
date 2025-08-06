@@ -46,7 +46,7 @@ This project implements a personal Network-Attached Storage (NAS) system with se
 
 
 ## ⚙️ Software
-  
+
 | Component                                                                   | Purpose                                                                                                                                                   |
 | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [🍓 Raspberry Pi Imager](https://www.raspberrypi.com/software/)             | simplifies the process of installing an operating system onto a Raspberry Pi's SD card                                                                    |
@@ -86,6 +86,12 @@ This project implements a personal Network-Attached Storage (NAS) system with se
 ## 💡 Things to Improve
     
 - integrate MQTT support for remote power control of the Shelly Plug device (see [⚡ MQTT Power Control](improvements/mqtt-power-control))
+	- until now: HTTP Request (see [🔌 Power Control of Shelly Plug Device Using HTTP Requests](docs/backup-script.md#-power-control-of-shelly-plug-device-using-http-requests)
+- log-file that allows to retrace the performed actions and any errors that have occurred (any special logging libs in Python?)
+- explain how to access files via Smartphone
+- add different users with different permissions
+- RAID implementation
+- improve hardware setup
 
 
 ## 📄 References
