@@ -1,8 +1,26 @@
 # raspberry-pi-nas
-
-
+  
+This project implements a personal Network-Attached Storage (NAS) system with secure VPN access for remote connectivity on a Raspberry Pi. It acts as your private storage, always accessible allowing you to store, access, and share files over your network. A Python script enables automated weekly and monthly backups, ensuring your data is regularly and reliably saved.
+  
+  
+---
+  
+  
+## 📑 Table of Contents
+  
+1. [🧭 Project Goals](#project-goals)
+2. [🔧 Hardware](#hardware)
+3. [⚙️ Software](#software)
+4. [📋 Setup Instructions](#setup-instructions)
+5. [💡 Things to Improve](#things-to-improve)
+6. [📄 References](#references)
+  
+  
+---
+  
+  
 ### 🧭 Project Goals
-
+    
 - 💾 **Centralized file storage and backup**  
   Provide a reliable way to store and back up personal files on a Raspberry Pi-powered NAS
 - 🕒 **Scheduled** backups  
@@ -19,23 +37,13 @@
   Explore the feasibility of storing games on the NAS and running them remotely, possibly via streaming or network mounts
 - 🔐 **User-specific access control**  
   Implement user account management with customizable access rights and folder-level permissions
-
-
+  
+  
 ---
-
-## Introduction
-
-#### What is a NAS?
-
-= Network-Attached Storage
-- small computer connected to network that stores and shares files
-- own private storage that's always availabe
-
-
----
-
+  
+  
 ## 🔧 Hardware
-
+  
 - Raspberry Pi 4 (4GB RAM)
 - Power Supply
 - [Cooling Case](https://www.amazon.de/Miuzei-Raspberry-K%C3%BChlk%C3%B6rper-AUS-Schalter-kompatibel/dp/B08FHN6HX8/ref=sr_1_6?__mk_de_DE=%C3%85M%C3%85%C5%BD%C3%95%C3%91&crid=5FPFBSAKBP9Z&dib=eyJ2IjoiMSJ9.rWEIGvFsseclRI2s8bgV39bF7XG7All8_g-AhRiQid9On6EFy_rC3N48WLd0AZfpFyoY1yVegiUlpzOjdMY02tNz_q04X9RcBukerVcsKd1X5Ksz04cGkgiOlWKvAJWBDdGMJrNKNHcTDyuuS8awbm4qIoeOop1SYBjb9YFnWyxWGprodjpeCNQjhK6w-UeHPfyRvkXwpvyVpLXbZnU8ykaIvxnAhbBK20tSAk2qo0A.rnqKbW4D1ynZZ0WTLVxQIZIBes_NIh7qFl9iISxBQw4&dib_tag=se&keywords=miuzei+case+for+raspberry+4&qid=1753211869&sprefix=miuzei+case+for+raspberry+4%2Caps%2C91&sr=8-6)  
@@ -44,284 +52,60 @@
 - [Case for SSD](https://www.mediamarkt.de/de/product/_isy-ise-1000-gy-nvme-ssd-gehause-grau-2876271.html)
 - Ethernet Cable
 - [Shelly Plug S MTR Gen3](https://kb.shelly.cloud/knowledge-base/shelly-plug-s-mtr-gen3) (for remote power control)
-
+  
+  
 ---
-
+  
+  
 ## ⚙️ Software
-
-| Component                 | Purpose                                                                                                                                  |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 🧠 Raspberry Pi OS (Lite) | operating system (OS) for the Raspberry Pi                                                                                               |
-| 📂 Samba                  | enables network file sharing; lets you access, upload, and manage files stored on the Raspberry Pi                                       |
-| 🛡️ PiVPN                 | create a secure VPN tunnel; lets you access your Raspberry Pi and NAS from anywhere on the internet as if you were at home               |
-| 🌐 File Browser           | web-based interface; lets yo access, manage, upload, and download files from your Raspberry Pi using just a browser; includes user login |
-
+  
+| Component                                                                   | Purpose                                                                                                                                                   |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [🍓 Raspberry Pi Imager](https://www.raspberrypi.com/software/)             | simplifies the process of installing an operating system onto a Raspberry Pi's SD card                                                                    |
+| [🖥️ PuTTY](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html) | terminal emulator used to securely access the Raspberry Pi via SSH and Telnet                                                                             |
+| 🧠 Raspberry Pi OS (Lite)                                                   | operating system (OS) for the Raspberry Pi                                                                                                                |
+| 📂 Samba                                                                    | enables network file sharing; lets you access, upload, and manage files stored on the Raspberry Pi                                                        |
+| 🛡️ PiVPN                                                                   | create a secure VPN tunnel; lets you access your Raspberry Pi and NAS from anywhere on the internet as if you were at home                                |
+| 🌐 File Browser                                                             | web-based interface; lets yo access, manage, upload, and download files from your Raspberry Pi using just a browser; includes user login                  |
+| [🔒 OpenVPN Client Software](https://openvpn.net/client/)                   | securely connects your device to a VPN server, enabling encrypted remote network access                                                                   |
+| [📖 OpenVPN Open Source](https://openvpn.net/community/)                    | free, open-source VPN solution that provides secure, encrypted connections between networks or devices, needed to control the VPN connection using Python |
+  
+  
 ---
+  
+  
+## 📋 Setup Instructions
+  
+1. Configure Raspberry Pi as NAS (see [🐾 Steps to Set-Up NAS](docs/setup-nas.md))
+2. Set up VPN access (see [🏃‍♀️ Steps to Set-Up VPN](docs/setup-vpn.md))
+3. Prepare `.env` file for the Python backup script 
 
-## 🐾 Steps to Set-Up NAS
+| .env variable  | Explanation                                                                                                 | Example                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| WORKING_PATH   | Path to your working directory/ files and folders you want to backup                                        | "C:\\\\Users\\\\user1"                                     |
+| BACKUP_PATH    | Destination path on NAS where backups will be stored                                                        | "\\\\\\\\123.456.7.891\\\\shared"                          |
+| NASA_REMOTE_IP | IP address of your NAS device                                                                               | "123.456.7.891"                                            |
+| NASA_USERNAME  | Username to access your NAS                                                                                 | "raspberry"                                                |
+| NASA_PWD       | Password for your NAS user                                                                                  | "pi"                                                       |
+| SHELLY_IP      | IP address of the Shelly Plug device                                                                        | "198.765.4.321"                                            |
+| SMB_USERNAME   | Samba (SMB) username for accessing shared folders on NAS system                                             | "user1"                                                    |
+| SMB_PWD        | Samba (SMB) password                                                                                        | "pwd123"                                                   |
+| OVPN_PATH      | Path where [OpenVPN Open Source](https://openvpn.net/community/) GUI executable (openvpn-gui.exe) is stored | "C:\\\\Program Files\\\\OpenVPN\\\\bin\\\\openvpn-gui.exe" |
+| OVPN_CONFIG    | Name of your OpenVPN profile/config file                                                                    | "Profile1.ovpn"                                            |
+| WEEKLY_PREFIX  | Prefix name for weekly backup folder on your NAS                                                            | "weekly-backup-"                                           |
+| MONTHLY_PREFIX | Prefix name for monthly backup folder on your NAS                                                           | "monthly-backup-"                                          |
 
-1. Download [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
-2. Backup and format MicroSD
-3. Start Raspberry Pi Images once it has been installed - choose your device, Raspberry Pi OS Lite (64-Bit) and your MicroSD card
-4. Change settings: set up username and password, enable SSH, (optional) choose time zone
-5. Remove MicroSD card once it's ready and insert into Raspberry Pi
-6. Connect Raspberry Pi to network and power it up
-7. Connect wireless using SSH (will need username and password, IP address of Pi (find out by connecting to router))
-	- use [PuTTY](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html) - lets you remotely access the command line of another device (like here the Rasperry Pi) from WIndows PC
-	- Linux/macOS have built-in SSH clients in the terminal; Windows doesn't, PuTTY fills that gap
-8. Set a static IP address for your Pi
-9. Update and upgrade everything once you are connected via SSH to your Raspberry Pi (simply good practice)
-   ```
-	sudo apt update
-	sudo apt upgrade
-	```
-10. Find your storage that is connected to your Pi (sda, not mounted yet)
-    ```
-	lsblk
-	```
-11. Partition storage
-    ```
-	sudo fdisk /dev/sda
-	m # Command (m for help)
-	d # Delete a partition
-	w # Write table to disk and exit
-
-	# Create new fresh partition
-	sudo fdisk /dev/sda
-	n # Add a new partition
-	w # Write table to disk and exit
-	```
-12. Format storage/ the newly created partition
-    ```
-	sudo mkfs.ext4 /dev/sda1
-	```
-13. Mount drive to system (so that we can access it)
-    ```
-	# Create mount point = new directory inside the system
-	cd ..
-	cd ..
-	ls # show directories etc. (correct if you can see home, mnt, tmp, ...)
-	cd /mnt/
-	sudo mkdir mystorage
-	ls
-	cd ..
-
-	# Mount drive to system
-	sudo mount /dev/sda1 /mnt/mystorage
-	
-	```
-14. Automate mount process (= mount drive to system everytime it is started; otherwise you would have to repeat it)
-    ```
-	sudo nano /etc/fstab
-	```
-	- add following to the end of the file before the comments:
-	  */dev/sda1 /mnt/mystorage ext4 defaults,noatime 0 1*
-	- Strg + X -> Y -> Enter
-15. Reboot the system to check whether the drive is mounted automatically
-    ```
-	sudo reboot
-	lsblk
-	```
-16. Create shared folder
-    ```
-	cd ..
-	cd ..
-	cd mnt/mystorage
-	sudo mkdir shared
-	ls
-	```
-17. Grant read and write permissions to all users on the system
-    ```
-	sudo chmod -R 777 /mnt/mystorage/shared
-	```
-18. Install Samba (so that the newly created shared folder can be shared)
-    ```
-	sudo apt install samba samba-common-bin
-	```
-19. Modify the config file of Samba to tell it to shared our folder over the network
-    ```
-	sudo nano /etc/samba/smb.conf
-	```
-	- add to the end of the file
-	  *\[shared\]*
-	  *path=/mnt/mystorage/shared*
-	  *writeable=Yes*
-	  *create mask=0777*
-	  *directory mask=0777*
-	  *public=no*
-	- Strg + X -> Y -> Enter
-20. Restart Samba to load the new configuration
-    ```
-	sudo systemctl restart smbd
-	```
-21. Grant drive access to user
-	- \<username> is your username on the Pi
-	- entering new password will add you as user to Samba
-    ```
-	sudo smbpasswd -a <username>
-	```
-
-
+4. Run the Python backup script (see [🐍 Python Script for Automated Backups](docs/backup-script.md)) using `python main.py` or add it as a cron job
+  
+  
 ---
-
-
-## 🏃‍♀️ Steps to Set-Up VPN
-
-1. Connect to Raspberry Pi over local network using SSH and PuTTY
-2. Install PiVPN
-   ```
-	curl -L https://install.pivpn.io | bash
-	```
-	- set up static IP address?
-		- depends whether you set the IP address of your Pi on your router to static
-		- set to static... answer "\<Yes>", otherwise "\<No>"
-	- choose OpenVPN (space to select) and proceed
-	- port "1194" is the OpenVPN port (choose any other free port number for increased security)
-	- choose "Google" as DNS provider
-	- choose "DNS Entry" (follow before doing so: [Raspberry Pi DDNS Setup Tutorial! (DuckDNS)](https://www.youtube.com/watch?v=s-66gmIHoyE) / written instructions: [How to Setup DuckDNS on a Raspberry Pi](https://www.wundertech.net/how-to-setup-duckdns-on-a-raspberry-pi/))
-	- public DNS name : "\<subdomain>.duckdns.org"
-3. Create a profile
-   ```
-	pivpn add
-	```
-4. See all the profiles that you created
-   ```
-	cd ovpns
-	ls
-	```
-5. Get this profile off your Pi to the device which you want to connect via VPN to your local network
-	- NAS is already set-up: copy ovpn profile to shared folder
-	  ```
-		sudo cp <profile-name>.ovpn /mnt/mystorage/shared
-		```
-	- if not: follow instructions in video 06:13: [OpenVPN Raspberry Pi Setup using PiVPN! (Easy Tutorail)](https://www.youtube.com/watch?v=kLmbgJe1rEU)
-6. Port forward UDP port on router to Raspberry Pi (setup depends on router)
-7. Decide between Split-Tunnel VPN and Full-Tunnel VPN
-	- split-tunnel connection is enough since the purpose is to access our shared Samba folder from outside our network
-	- full-tunnel VPN connection should be used when trying to secure your connection at public Wi-Fi locations
-	- a OpenVPN profile is by default configured as a full-tunnel VPN connection
-	- to make an OpenVPN profile act as split-tunnel VPN add the following two lines to the profile file (where the IP address must correpond to network IP address range)
-	  *route-nopull*
-	  *route 192.168.2.0 255.255.255.0 vpn_gateway*
-<img src="images/split-full-tunnel-vpn-comparison.png" width=550px/>
-8. Download OpenVPN client software (different for each device)
-	- Windows: [OpenVPN Connect for Windows](https://openvpn.net/client/)  
-	- iOS: OpenVPN Connect
-	- Android: OpenVPN für Android
-
----
-
-## 🔗 Connect to NAS
-
-#### From Inside Your Network
-
-1. Create test file "helloworld.txt"
-   ```
-	cd /mnt/mystorage/shared
-	touch helloworld.txt
-	ls
-	sudo nano helloworld.txt # to add some content
-	```
-2. Windows: go to "This PC" and enter "\\\\\<ip>\shared" -> enter your login credential to **Samba**
-3. Now that we know that everything is working, we can add our Raspberry Pi to our network locations
-	- right click under "This PC" -> add network address -> \\\\\<ip>\shared
-
-#### From Outside Your Network
-
-= network connection that is external to your local area network (LAN)
-- outside network = network that is external to the immediate network environment in which a device is located
-- secure and reliable option: VPN (Virtual Private Network)
-	- establishes a secure and encrypted connection your device and a remote network over the internet 
-	- allows access to Pi as if you were on the same local network
-	- dynamic DNS (Domain Name System) can be utilized to assign a domain name to Pi's IP address (makes it easier to connect remotely)
-	- consider enabling two-factor authentication to ensure security of remote access
-- ...
-- see "Steps to Set-Up VPN" for enabling VPN to connect from outside your local area network
-
-
----
-
-## 💡 Remote Power Control with Shelly Plug
-
-#### MQTT
-
-= Message Queuing Telemetry Transport
-- lightweight, publish-subscribe messaging protocol
-- designed for low-bandwidth, high-latency or unreliable networks
-- widely used in IoT applications where devices (e.g. sensors, plugs, thermostats) need to send or receive data efficiently
-- broker needed
-
-| Key Concept | Description                                                                                                                 |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Broker      | central server that manages messages; devices don't talk to each other directly - they go through the broker                |
-| Client      | any device or application that connects to the broker; clients can publish messages or subscribe to topics                  |
-| Topic       | a string like ```home/livingroom/lamp``` that helps organize messages; clients subscribe to topics to receive relevant data |
-| Publish     | client sends a message to a topic                                                                                           |
-| Subscribe   | client tells broker it wants messages from a specific topic                                                                 |
-
-- need to enable MQTT on Shelly Plug
-
-> Once you enable MQTT on your Shelly Plug, MQTT takes over the control - so the Shelly app usually can't control the device at the same time
-
-
-- this means
-	- Python script (here) will control the device
-	- Shelly app can no longer be used to turn it on/off (only in local network)
-	- if you want to control your Shelly Plug via Python and MQTT, you have to accept that the Shelly app won't be able to control the plug (or only very limited)
-	- you can still use the Shelly app for status updates, but control commands must go via MQTT
-- reasons
-	- Shelly disables cloud-based control commands when MQTT control is active to avoid conflicts
-	- MQTT control happens "directly" through your broker to the device
-
-
-#### Setup
-
-| Role       | Device/Software                                                    | Notes                                                                                                   |
-| ---------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| Subscriber | Shelly Plug S Gen3                                                 | listens to MQTT commands (e.g. "on"/"off") = subscribes to the topic and siwtches on or off accordingly |
-| Publisher  | Python script on PC                                                | sends/ publishes MQTT messages to a topic to control the plug                                           |
-| Broker     | [HiveMQ Cloud](https://www.hivemq.com/products/mqtt-cloud-broker/) | routes messages between publisher and subscriber                                                        |
-
-#### HiveMQ Cloud as a Cloud Broker
-
-- pretty easy: go to https://www.hivemq.com/index-alt/ -> Click "Start Free" -> "Sign Up Free Now" for the "HiveMQ Cloud" -> Sign Up -> Create Serverless Cluster (it's free!)
-
----
-
-
-## Python Script
-
-
-#### Handle OpenVPN
-
-1. [Classic OpenVPN](https://openvpn.net/community/) required to control the connection using Python
-	- will install to C:\Program Files\OpenVPN
-	- with
-		- bin\openvpn.exe
-		- bin\openvpn-gui.exe
-		- config\folder
-2. Place .ovpn file (= client profile from PiVPN (see "🏃‍♀️ Steps to Set-Up VPN")) into C:\Program Files\OpenVPN\config\client.ovpn
-3. Test connection manually before automating with Python
-	- start openvpn-gui.exe (run as administrator)
-	- right-click tray icon -> connect -> choose client
-4. Enable automatic password usage
-	- tick the option to save the password when connecting
-	- this ensures that Python can start the VPN connection without requiring manual password entry
-5. Automate with Python
-	- profile name must match the filename (client.ovpn)
-   ```Python
-	import subprocess
-
-	openvpn_gui = r"C:\Program Files\OpenVPN\bin\openvpn-gui.exe"
-
-	# connect
-	subprocess_run([openvpn.gui, "--command", "connect"], "client.ovpn")
-
-	# disconnect
-	subprocess_run([openvpn.gui, "--command", "disconnect", "client.ovpn"])
-	```
-
-
+  
+  
+## 💡 Things to Improve
+    
+- integrate MQTT support for remote power control of the Shelly Plug device (see [⚡ MQTT Power Control](improvements/mqtt-power-control))
+  
+  
 ---
 
 ## 📄 References
