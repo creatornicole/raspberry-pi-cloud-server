@@ -73,7 +73,7 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)
 
-            print(f"{info_symbol} {p} from {working_path} added to {backup_path}")
+            print(f"{info_symbol} '{p}' from '{working_path}' added to '{backup_path}'")
 
     def handle_deletions(backup_path: Path, paths):
         """
@@ -104,13 +104,13 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
             # filter out any files inside that deleted directory
             deleted_files = [path for path in deleted_files if not path.is_relative_to(deleted_dir)]
 
-            print(f"{info_symbol} Deleted directory {deleted_dir} and all of its content")
+            print(f"{info_symbol} Deleted directory '{deleted_dir}' and all of its content")
 
         # deleted individual files from the backup location
         for deleted_file in deleted_files:
             (backup_path / Path(deleted_file)).unlink()
 
-            print(f"{info_symbol} Deleted file {deleted_file}")
+            print(f"{info_symbol} Deleted file '{deleted_file}'")
     
     def handle_modifications(working_path: Path, backup_path: Path, paths):
         """
@@ -127,7 +127,16 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
             # copy and overwrite existing file
             shutil.copy2(src, dst)
 
-            print(f"{info_symbol} {p} from {working_path} in {backup_path} updated")
+            print(f"{info_symbol} '{p}' from '{working_path}' in '{backup_path}' updated")
+
+    def handle_change(func, kind, num, *args):
+        """
+        """
+        if num == 0:
+            print(f"{info_symbol} No need to handle {kind}, as none were detected")
+        else:
+            func(*args)
+            print(f"\033[32m{success_symbol} Handled {kind} \033[0m")
 
     success_symbol, err_symbol, warning_symbol, info_symbol = load_variables()
 
@@ -161,18 +170,15 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
 
     added, deleted, modified = get_changes(working_path, new_backup_path)
 
-    print(f"{info_symbol} {len(added)} additions, {len(deleted)} deletions and {len(modified)} modifications detected")
+    num_added, num_deleted, num_modified = len(added), len(deleted), len(modified)
 
-    handle_additions(working_path, new_backup_path, added)
-    print(f"\033[32m{success_symbol} Handled additions \033[0m")
+    print(f"{info_symbol} {num_added} additions, {num_deleted} deletions and {num_modified} modifications detected")
 
-    handle_deletions(new_backup_path, deleted)
-    print(f"\033[32m{success_symbol} Handled deletions \033[0m")
-
+    handle_change(handle_additions, "additions", num_added, working_path, new_backup_path, added)
+    handle_change(handle_deletions, "deletions", num_deleted, new_backup_path, deleted)
     # modification must be handled after additions and deletions,
     # because handle_modifications assumes that all required parent directories already exist
-    handle_modifications(working_path, new_backup_path, modified)
-    print(f"\033[32m{success_symbol} Handled modifications \033[0m")
+    handle_change(handle_modifications, "modifications", num_modified, working_path, new_backup_path, modified)
 
     print(f"\033[32m{success_symbol} {prefix_name.capitalize()} backup done \033[0m")
 
