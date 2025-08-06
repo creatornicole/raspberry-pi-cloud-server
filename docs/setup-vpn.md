@@ -36,7 +36,7 @@
 	- to make an OpenVPN profile act as split-tunnel VPN add the following two lines to the profile file (where the IP address must correpond to network IP address range)
 	  *route-nopull*
 	  *route 192.168.2.0 255.255.255.0 vpn_gateway*
-<img src="images/split-full-tunnel-vpn-comparison.png" width=550px/>
+<img src="../images/split-full-tunnel-vpn-comparison.png" width=550px/>
 8. Download OpenVPN client software (different for each device)
 	- Windows: [OpenVPN Connect for Windows](https://openvpn.net/client/)  
 	- iOS: OpenVPN Connect

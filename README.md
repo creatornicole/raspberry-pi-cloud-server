@@ -1,25 +1,19 @@
 # raspberry-pi-nas
   
 This project implements a personal Network-Attached Storage (NAS) system with secure VPN access for remote connectivity on a Raspberry Pi. It acts as your private storage, always accessible allowing you to store, access, and share files over your network. A Python script enables automated weekly and monthly backups, ensuring your data is regularly and reliably saved.
-  
-  
----
-  
-  
+
+
 ## 📑 Table of Contents
   
-1. [🧭 Project Goals](#project-goals)
+1. [🧭 Project Goals](#-project-goals)
 2. [🔧 Hardware](#hardware)
 3. [⚙️ Software](#software)
 4. [📋 Setup Instructions](#setup-instructions)
 5. [💡 Things to Improve](#things-to-improve)
 6. [📄 References](#references)
-  
-  
----
-  
-  
-### 🧭 Project Goals
+
+
+## 🧭 Project Goals
     
 - 💾 **Centralized file storage and backup**  
   Provide a reliable way to store and back up personal files on a Raspberry Pi-powered NAS
@@ -37,11 +31,8 @@ This project implements a personal Network-Attached Storage (NAS) system with se
   Explore the feasibility of storing games on the NAS and running them remotely, possibly via streaming or network mounts
 - 🔐 **User-specific access control**  
   Implement user account management with customizable access rights and folder-level permissions
-  
-  
----
-  
-  
+
+
 ## 🔧 Hardware
   
 - Raspberry Pi 4 (4GB RAM)
@@ -52,11 +43,8 @@ This project implements a personal Network-Attached Storage (NAS) system with se
 - [Case for SSD](https://www.mediamarkt.de/de/product/_isy-ise-1000-gy-nvme-ssd-gehause-grau-2876271.html)
 - Ethernet Cable
 - [Shelly Plug S MTR Gen3](https://kb.shelly.cloud/knowledge-base/shelly-plug-s-mtr-gen3) (for remote power control)
-  
-  
----
-  
-  
+
+
 ## ⚙️ Software
   
 | Component                                                                   | Purpose                                                                                                                                                   |
@@ -69,11 +57,8 @@ This project implements a personal Network-Attached Storage (NAS) system with se
 | 🌐 File Browser                                                             | web-based interface; lets yo access, manage, upload, and download files from your Raspberry Pi using just a browser; includes user login                  |
 | [🔒 OpenVPN Client Software](https://openvpn.net/client/)                   | securely connects your device to a VPN server, enabling encrypted remote network access                                                                   |
 | [📖 OpenVPN Open Source](https://openvpn.net/community/)                    | free, open-source VPN solution that provides secure, encrypted connections between networks or devices, needed to control the VPN connection using Python |
-  
-  
----
-  
-  
+
+
 ## 📋 Setup Instructions
   
 1. Configure Raspberry Pi as NAS (see [🐾 Steps to Set-Up NAS](docs/setup-nas.md))
@@ -96,17 +81,12 @@ This project implements a personal Network-Attached Storage (NAS) system with se
 | MONTHLY_PREFIX | Prefix name for monthly backup folder on your NAS                                                           | "monthly-backup-"                                          |
 
 4. Run the Python backup script (see [🐍 Python Script for Automated Backups](docs/backup-script.md)) using `python main.py` or add it as a cron job
-  
-  
----
-  
-  
+
+
 ## 💡 Things to Improve
     
 - integrate MQTT support for remote power control of the Shelly Plug device (see [⚡ MQTT Power Control](improvements/mqtt-power-control))
-  
-  
----
+
 
 ## 📄 References
 
