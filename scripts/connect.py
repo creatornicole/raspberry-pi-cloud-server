@@ -73,6 +73,8 @@ def connect():
 
     if status == "unreachable":
         raise RuntimeError(f"\033[31m{err_symbol} Device still unreachable after VPN connection attempt \033[0m")
+    elif status == "vpn":
+        print(f"\033[32m{success_symbol} Connected to VPN successfully \033[0m")
     
     (nas_ip := os.getenv("NASA_REMOTE_IP")) or raise_env_error("NASA_REMOTE_IP")
     nas_port = 445
@@ -84,7 +86,7 @@ def connect():
         print(f"{info_symbol} Booting up Raspberry Pi", end="", flush=True)
 
         counter = 0
-        # wait up to 60 seconds for the Pi to boot up
+        # wait for the Pi to boot up
         while not is_port_open(nas_ip, nas_port) and counter <= 60:
             print(".", end="", flush=True)
             counter += 1

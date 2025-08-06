@@ -44,6 +44,11 @@ def is_monthly_scheduled() -> bool:
 
     return month_changed or month_changes
 
+monthly = is_monthly_scheduled()
+
+if monthly:
+    print(f"{info_symbol} Monthly backup is scheduled")
+
 perform_backup(working_path, backup_path, is_monthly_scheduled())
 time.sleep(15)
 

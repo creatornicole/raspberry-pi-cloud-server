@@ -73,6 +73,8 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)
 
+            print(f"{info_symbol} {p} from {working_path} added to {backup_path}")
+
     def handle_deletions(backup_path: Path, paths):
         """
         Removes files and directories from the backup_path that have been
@@ -102,9 +104,13 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
             # filter out any files inside that deleted directory
             deleted_files = [path for path in deleted_files if not path.is_relative_to(deleted_dir)]
 
+            print(f"{info_symbol} Deleted directory {deleted_dir} and all of its content")
+
         # deleted individual files from the backup location
         for deleted_file in deleted_files:
             (backup_path / Path(deleted_file)).unlink()
+
+            print(f"{info_symbol} Deleted file {deleted_file}")
     
     def handle_modifications(working_path: Path, backup_path: Path, paths):
         """
@@ -121,6 +127,8 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
             # copy and overwrite existing file
             shutil.copy2(src, dst)
 
+            print(f"{info_symbol} {p} from {working_path} in {backup_path} updated")
+
     success_symbol, err_symbol, warning_symbol, info_symbol = load_variables()
 
     prefix_env, prefix_name = ("MONTHLY_PREFIX", "monthly") if perform_monthly_backup else ("WEEKLY_PREFIX", "weekly")
@@ -128,10 +136,14 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
     
     create_backup_dir = False
 
+    print(f"{info_symbol} {prefix_name.capitalize()} backup process is started...")
+
     curr_backup_dir = find_backup_dir(prefix)
     if not curr_backup_dir:
         create_backup_dir = True
         print(f"\033[33m{warning_symbol} {prefix_name.capitalize()} backup directory has yet to bet set up \033[0m")
+    else:
+        print(f"{info_symbol} {curr_backup_dir} is the current {prefix_name} backup dir")
 
     new_backup_path = get_backup_path(prefix, backup_path)
 
@@ -149,11 +161,20 @@ def perform_backup(working_path: Path, backup_path: Path, monthly_scheduled: boo
 
     added, deleted, modified = get_changes(working_path, new_backup_path)
 
+    print(f"{info_symbol} {len(added)} additions, {len(deleted)} deletions and {len(modified)} modifications detected")
+
     handle_additions(working_path, new_backup_path, added)
+    print(f"\033[32m{success_symbol} Handled additions \033[0m")
+
     handle_deletions(new_backup_path, deleted)
+    print(f"\033[32m{success_symbol} Handled deletions \033[0m")
+
     # modification must be handled after additions and deletions,
     # because handle_modifications assumes that all required parent directories already exist
     handle_modifications(working_path, new_backup_path, modified)
+    print(f"\033[32m{success_symbol} Handled modifications \033[0m")
+
+    print(f"\033[32m{success_symbol} {prefix_name.capitalize()} backup done \033[0m")
 
     if monthly_scheduled:
         # monthly backup is scheduled, so we now trigger it by calling perform_backup again
