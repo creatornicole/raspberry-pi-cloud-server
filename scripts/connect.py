@@ -1,25 +1,66 @@
 from helpers import is_port_open, raise_env_error, shutdown_shelly
 import os
+import platform
 import requests
 from smbclient import register_session
 import subprocess
 import time
 from load_variables import load_variables
+import sys
 
 def connect():
     """
     """
-    def is_on_same_network(target_ip: str) -> bool:
+    def connected_to_local_network(target_ip: str, target_mac: str) -> bool:
         """
         """
-        result = subprocess.run(
-            ["ping", "-n", "1", target_ip], 
-            capture_output=True, 
-            text=True, 
-            encoding="utf-8", 
-            errors="ignore"
-        )
-        return result.returncode == 0 # 0 = ping success
+        def ping(target_ip: str):
+            """
+            """
+            param = "-n" if platform.system().lower() == "windows" else "-c"
+            result = subprocess.run(
+                ["ping", param, "1", target_ip],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="ignore"
+            )
+            return result.returncode == 0 # 0 means success
+        
+        def get_mac(target_ip: str) -> str:
+            """
+            """
+            try:
+                if platform.system().lower() == "windows":
+                    output = subprocess.check_output(["arp", "-a", target_ip]).decode()
+                    for line in output.splitlines():
+                        if target_ip in line:
+                            return line.split()[1].replace("-", ":").lower()
+                else:
+                    output = subprocess.check_output(["arp", "-n", target_ip]).decode()
+                    for line in output.splitlines():
+                        if target_ip in line:
+                            return line.split()[2].lower()
+            except Exception as e:
+                raise RuntimeError(f"\033[31m Failed to get MAC address for IP {target_ip}: {e} \033[0m")
+
+        print(f"{info_symbol} Checking if Shelly Plug ({shelly_ip}) is reachable...")
+
+        if not ping(target_ip):
+            print(f"\033[32m{warning_symbol} Shelly plug at {shelly_ip} is unreachable - you are likely OUTSIDE your local network \033[0m")
+            return False
+        
+        mac = get_mac(target_ip)
+        print(mac, target_mac)
+        if mac == target_mac:
+            print(f"\033[32m{success_symbol} Shelly plug is reachable \033[0m")
+        else:
+            print(f"\033[33m{warning_symbol} Ping replied, but MAC address doesn't match \033[0m")
+            print(f"\033[33m{warning_symbol} Found: {mac}, expected: {shelly_mac} \033[0m")
+            print(f"\033[33m{warning_symbol} You might be OUTSIDE your local network or talking to a different device \033[0m")
+            return False
+        
+        return True
     
     def connect_to_vpn(ovpn_gui: str, ovpn_profile: str):
         """
@@ -71,8 +112,9 @@ def connect():
     success_symbol, err_symbol, warning_symbol, info_symbol = load_variables()
 
     (shelly_ip := os.getenv("SHELLY_IP")) or raise_env_error("SHELLY_IP")
+    (shelly_mac := os.getenv("SHELLY_MAC")) or raise_env_error("SHELLY_MAC")
 
-    if is_on_same_network(shelly_ip):
+    if connected_to_local_network(shelly_ip, shelly_mac):
         print(f"{info_symbol} NAS in local network")
         status = "local"
     else:
@@ -84,7 +126,7 @@ def connect():
         connect_to_vpn(ovpn_gui, ovpn_profile)
         time.sleep(15)
 
-        status = "vpn" if is_on_same_network(shelly_ip) else "unreachable"
+        status = "vpn" if connected_to_local_network(shelly_ip) else "unreachable"
 
     if status == "unreachable":
         raise RuntimeError(f"\033[31m{err_symbol} Device still unreachable after VPN connection attempt \033[0m")
