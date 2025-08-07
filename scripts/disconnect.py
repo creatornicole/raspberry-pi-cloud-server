@@ -1,8 +1,7 @@
-from helpers import is_port_open, raise_env_error
+from helpers import is_port_open, raise_env_error, shutdown_shelly
 from load_variables import load_variables
 import os
 import paramiko
-import requests
 import subprocess
 import time
 
@@ -25,19 +24,6 @@ def disconnect():
             ssh.close()
         except Exception as e:
             raise RuntimeError(f"\033[31m{err_symbol} Unexpected error occured: {e} \033[0m")
-
-    def shutdown_shelly(ip: str):
-        """
-        """
-        url = f"http://{ip}/relay/0?turn=off"
-        try:
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                print(f"\033[32m{success_symbol} Shelly turned OFF successfully \033[0m")
-            else:
-                raise RuntimeError(f"\033[31m{err_symbol} Failed to turn off Shelly. Status code: {response.status_code} \033[0m")
-        except requests.RequestException as e:
-            raise ConnectionError(f"\033[31m{err_symbol} Error connecting to Shelly at {ip}: {e} \033[0m")
 
     def disconnect_vpn_if_connected(ovpn_gui: str, ovpn_profile: str):
         """
@@ -64,7 +50,7 @@ def disconnect():
     (nas_username := os.getenv("NASA_USERNAME")) or raise_env_error("NASA_USERNAME")
     (nas_pwd := os.getenv("NASA_PWD")) or raise_env_error("NASA_PWD")
 
-    # shutdown_pi(nas_ip, nas_username, nas_username)
+    shutdown_pi(nas_ip, nas_username, nas_pwd)
     print(f"{info_symbol} Waiting for Raspberry Pi to shut down", end="", flush=True)
     
     counter = 0
@@ -78,13 +64,13 @@ def disconnect():
     if is_port_open(nas_ip, nas_port):
         raise RuntimeError(f"\033[31m{err_symbol} NAS cannot be shut down \033[0m")
 
-    (shelly_ip := os.getenv("SHELLY_IP")) or raise_env_error("SHELLY_IP")
-    
-    shutdown_shelly(shelly_ip)
-    time.sleep(5)
-
     (ovpn_gui := os.getenv("OVPN_PATH")) or raise_env_error("OVPN_PATH")
     (ovpn_profile := os.getenv("OVPN_CONFIG")) or raise_env_error("OVPN_CONFIG")
     
     disconnect_vpn_if_connected(ovpn_gui, ovpn_profile)
+    time.sleep(1)
+
+    (shelly_ip := os.getenv("SHELLY_IP")) or raise_env_error("SHELLY_IP")
+    
+    shutdown_shelly(shelly_ip)
 

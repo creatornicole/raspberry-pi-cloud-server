@@ -1,4 +1,4 @@
-from helpers import is_port_open, raise_env_error
+from helpers import is_port_open, raise_env_error, shutdown_shelly
 import os
 import requests
 from smbclient import register_session
@@ -43,6 +43,8 @@ def connect():
             raise RuntimeError(f"\033[31m{err_symbol} Failed to reach Shelly at {ip} \033[0m")
 
     def turn_on_shelly(ip: str):
+        """
+        """
         url = f"http://{ip}/relay/0?turn=on"
         try:
             response = requests.get(url, timeout=5)
@@ -52,7 +54,20 @@ def connect():
                 raise RuntimeError(f"\033[31m{err_symbol} Failed to turn on Shelly. Status code: {response.status_code} \033[0m")
         except requests.RequestException as e:
             raise ConnectionError(f"\033[31m{err_symbol} Error connecting to Shelly at {ip}: {e} \033[0m")
-        
+    
+    def boot_up_pi(nas_ip: str, nas_port: str, timeout: int = 60) -> bool:
+        """
+        """
+        print(f"{info_symbol} Booting up Raspberry Pi", end="", flush=True)
+        for _ in range(timeout):
+            if is_port_open(nas_ip, nas_port):
+                print() # end the line of dots
+                return True
+            print(".", end="", flush=True)
+            time.sleep(1)
+        print() # end the line of dots
+        return False
+
     success_symbol, err_symbol, warning_symbol, info_symbol = load_variables()
 
     (shelly_ip := os.getenv("SHELLY_IP")) or raise_env_error("SHELLY_IP")
@@ -80,20 +95,21 @@ def connect():
     nas_port = 445
 
     if is_shelly_on(shelly_ip):
-        print(f"{info_symbol} Shelly already turned ON")
+        if is_port_open(nas_ip, nas_port):
+            print(f"{info_symbol} Shelly already turned ON")
+            pi_booted = True
+        else:
+            print(f"{info_symbol} Shelly ON but Pi not running")
+            print(f"{info_symbol} Restarting Shelly...")
+            shutdown_shelly(shelly_ip)
+            time.sleep(5)
+            turn_on_shelly(shelly_ip)
+            pi_booted = boot_up_pi(nas_ip, nas_port)
     else:
         turn_on_shelly(shelly_ip)
-        print(f"{info_symbol} Booting up Raspberry Pi", end="", flush=True)
-
-        counter = 0
-        # wait for the Pi to boot up
-        while not is_port_open(nas_ip, nas_port) and counter <= 60:
-            print(".", end="", flush=True)
-            counter += 1
-            time.sleep(1)
-        print() # move to the next line after the loop
+        pi_booted = boot_up_pi(nas_ip, nas_port)
         
-    if not is_port_open(nas_ip, nas_port):
+    if not pi_booted:
         raise RuntimeError(f"\033[31m{err_symbol} NAS cannot be reached \033[0m")
 
     # connect to Raspberry Pi NAS
