@@ -1,4 +1,6 @@
-from helpers import is_port_open, raise_env_error, shutdown_shelly
+from collections.abc import Callable
+from helpers import is_port_open, raise_env_error
+import locale
 import os
 import platform
 import requests
@@ -7,11 +9,12 @@ import subprocess
 import time
 from load_variables import load_variables
 import sys
+from shelly import turn_on_shelly, restart_shelly
 
 def connect():
     """
     """
-    def connected_to_local_network(target_ip: str, target_mac: str) -> bool:
+    def connected_to_same_network(target_ip: str, target_mac: str) -> bool:
         """
         """
         def ping(target_ip: str):
@@ -32,26 +35,26 @@ def connect():
             """
             try:
                 if platform.system().lower() == "windows":
-                    output = subprocess.check_output(["arp", "-a", target_ip]).decode()
+                    encoding = locale.getpreferredencoding(False)
+                    output = subprocess.check_output(["arp", "-a", target_ip]).decode(encoding, errors="ignore")
                     for line in output.splitlines():
                         if target_ip in line:
                             return line.split()[1].replace("-", ":").lower()
                 else:
-                    output = subprocess.check_output(["arp", "-n", target_ip]).decode()
+                    output = subprocess.check_output(["arp", "-n", target_ip]).decode(errors="ignore")
                     for line in output.splitlines():
                         if target_ip in line:
                             return line.split()[2].lower()
             except Exception as e:
-                raise RuntimeError(f"\033[31m Failed to get MAC address for IP {target_ip}: {e} \033[0m")
+                raise RuntimeError(f"\033[31m{err_symbol} Failed to get MAC address for IP {target_ip}: {e} \033[0m")
 
         print(f"{info_symbol} Checking if Shelly Plug ({shelly_ip}) is reachable...")
 
         if not ping(target_ip):
-            print(f"\033[32m{warning_symbol} Shelly plug at {shelly_ip} is unreachable - you are likely OUTSIDE your local network \033[0m")
+            print(f"\033[33m{warning_symbol} Shelly plug at {shelly_ip} is unreachable - you are likely OUTSIDE your local network \033[0m")
             return False
         
         mac = get_mac(target_ip)
-        print(mac, target_mac)
         if mac == target_mac:
             print(f"\033[32m{success_symbol} Shelly plug is reachable \033[0m")
         else:
@@ -60,107 +63,137 @@ def connect():
             print(f"\033[33m{warning_symbol} You might be OUTSIDE your local network or talking to a different device \033[0m")
             return False
         
-        return True
+        return True    
     
-    def connect_to_vpn(ovpn_gui: str, ovpn_profile: str):
+    def verify_local_connection(nas_ip: str, nas_port: int, host: str, auth_key: str, device_id: str, shelly_ip: str) -> bool:
         """
         """
-        subprocess.run([ovpn_gui, "--command", "connect", ovpn_profile])
-
-    def is_shelly_on(ip: str) -> bool:
-        """
-        """
-        url = f"http://{ip}/relay/0"
-        try:
-            response = requests.get(url, timeout=5)
-            response.raise_for_status()
-            data = response.json()
-
-            if data.get("ison"):
-                return True
-            else:
-                return False
-        except requests.RequestException as e:
-            raise RuntimeError(f"\033[31m{err_symbol} Failed to reach Shelly at {ip} \033[0m")
-
-    def turn_on_shelly(ip: str):
-        """
-        """
-        url = f"http://{ip}/relay/0?turn=on"
-        try:
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                print(f"\033[32m{success_symbol} Shelly turned ON successfully \033[0m")
-            else:
-                raise RuntimeError(f"\033[31m{err_symbol} Failed to turn on Shelly. Status code: {response.status_code} \033[0m")
-        except requests.RequestException as e:
-            raise ConnectionError(f"\033[31m{err_symbol} Error connecting to Shelly at {ip}: {e} \033[0m")
+        def wait_for_pi_boot(nas_ip: str, nas_port: int, timeout: int = 30) -> bool:
+            """
+            """
+            print(f"{info_symbol} Booting up Raspberry Pi", end="", flush=True)
+            for _ in range(timeout):
+                if is_port_open(nas_ip, nas_port):
+                    print() # end the line of dots
+                    return True
+                print(".", end="", flush=True)
+                time.sleep(1)
+            print() # end the line of dots
+            return False
     
-    def boot_up_pi(nas_ip: str, nas_port: str, timeout: int = 60) -> bool:
+        if is_port_open(nas_ip, nas_port):
+            print(f"\033[32m{success_symbol} Pi already booted up and NAS service reachable \033[0m")
+            return True
+        
+        if wait_for_pi_boot(nas_ip, nas_port):
+             print(f"\033[32m{success_symbol} Pi booted up successfully and NAS service reachable \033[0m")
+             return True
+        
+        print(f"\033[33m{warning_symbol} Pi cannot be reached, restarting Shelly... \033[0m")
+        restart_shelly(host, auth_key, device_id, shelly_ip)
+
+        if wait_for_pi_boot(nas_ip, nas_port):
+            print(f"\033[32m{success_symbol} Pi booted up successfully after restarting the Shelly \033[0m")
+            print(f"\033[32m{success_symbol} NAS service reachable \033[0m")
+            return True
+        
+        return False
+
+    def verify_vpn_connection(ovpn_bat: str, nas_ip: str, nas_port: int, host: str, auth_key: str, device_id: str, shelly_ip: str) -> bool:
         """
         """
-        print(f"{info_symbol} Booting up Raspberry Pi", end="", flush=True)
-        for _ in range(timeout):
+        def connect_to_vpn(ovpn_bat: str, nas_ip: str) -> bool:
+            """
+            """
+            try: 
+                vpn_proc = subprocess.run(
+                    [ovpn_bat],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+                if vpn_proc.returncode != 0:
+                    raise RuntimeError(f"\033[31m{err_symbol} VPN batch file process returned non-zero exit code: {vpn_proc.returncode} \033[0m")
+                
+                ping_proc = subprocess.run(
+                    ["ping", "-n", "1", nas_ip],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+                
+                return ping_proc.returncode == 0
+            
+            except Exception as e:
+                raise Exception(f"\033[31m{err_symbol} Exception during VPN connection attempt: {e} \033[0m")     
+        
+        def wait_for_vpn_connection(ovpn_bat: str, nas_ip: str, nas_port: int, host: str, auth_key: str, devide_id: str, timeout: int = 30) -> bool:
+            """
+            """
+            print(f"{info_symbol} Waiting for VPN connection", end="", flush=True)
+            for _ in range(timeout):
+                if connect_to_vpn(ovpn_bat, nas_ip):
+                    print() # end the line of dots
+                    return True
+                print(".", end="", flush=True)
+                time.sleep(1)
+            print() # end the line of dots
+            return False
+
+        if connect_to_vpn(ovpn_bat, nas_ip) or wait_for_vpn_connection(ovpn_bat, nas_ip, nas_port, host, auth_key, device_id):
+            print(f"\033[32m{success_symbol} VPN connected successfully \033[0m")
             if is_port_open(nas_ip, nas_port):
-                print() # end the line of dots
+                print(f"\033[32m{success_symbol} NAS service up and running and can be reached \033[0m")
                 return True
-            print(".", end="", flush=True)
-            time.sleep(1)
-        print() # end the line of dots
+            else:
+                print(f"\033[31m{err_symbol} NAS service cannot be reached \033[0m")
+                return False
+            
+        print(f"\033[33m{warning_symbol} VPN connection cannot be reached, restarting Shelly... \033[0m")
+        restart_shelly(host, auth_key, device_id, shelly_ip)
+
+        if wait_for_vpn_connection(ovpn_bat, nas_ip, nas_port, host, auth_key, device_id):
+            print(f"\033[32m{success_symbol} Connected to VPN successfully after restarting the Shelly \033[0m")
+            return True
+        
         return False
 
     success_symbol, err_symbol, warning_symbol, info_symbol = load_variables()
 
     (shelly_ip := os.getenv("SHELLY_IP")) or raise_env_error("SHELLY_IP")
     (shelly_mac := os.getenv("SHELLY_MAC")) or raise_env_error("SHELLY_MAC")
+    (shelly_device_id := os.getenv("SHELLY_DEVICE_ID")) or raise_env_error("SHELLY_DEVICE_ID")
+    (shelly_cloud_server := os.getenv("SHELLY_CLOUD_SERVER")) or raise_env_error("SHELLY_CLOUD_SERVER")
+    (shelly_cloud_auth_key := os.getenv("SHELLY_CLOUD_AUTH_KEY")) or raise_env_error("SHELLY_CLOUD_AUTH_KEY")
 
-    if connected_to_local_network(shelly_ip, shelly_mac):
-        print(f"{info_symbol} NAS in local network")
-        status = "local"
-    else:
-        print(f"\033[33m{warning_symbol} NAS not in local network, connecting to VPN... \033[0m")
+    # does not matter whether Shelly is already turned on
+    turn_on_shelly(shelly_cloud_server, shelly_cloud_auth_key, shelly_device_id, shelly_ip)
 
-        (ovpn_gui := os.getenv("OVPN_PATH")) or raise_env_error("OVPN_PATH")
-        (ovpn_profile := os.getenv("OVPN_CONFIG")) or raise_env_error("OVPN_CONFIG")
-
-        connect_to_vpn(ovpn_gui, ovpn_profile)
-        time.sleep(15)
-
-        status = "vpn" if connected_to_local_network(shelly_ip) else "unreachable"
-
-    if status == "unreachable":
-        raise RuntimeError(f"\033[31m{err_symbol} Device still unreachable after VPN connection attempt \033[0m")
-    elif status == "vpn":
-        print(f"\033[32m{success_symbol} Connected to VPN successfully \033[0m")
-    
+    # decide whether vpn has to be turned on
     (nas_ip := os.getenv("NASA_REMOTE_IP")) or raise_env_error("NASA_REMOTE_IP")
-    nas_port = 445
+    (nas_port := int(os.getenv("NASA_PORT"))) or raise_env_error("NASA_PORT")
 
-    if is_shelly_on(shelly_ip):
-        if is_port_open(nas_ip, nas_port):
-            print(f"{info_symbol} Shelly already turned ON")
-            pi_booted = True
-        else:
-            print(f"{info_symbol} Shelly ON but Pi not running")
-            print(f"{info_symbol} Restarting Shelly...")
-            shutdown_shelly(shelly_ip)
-            time.sleep(5)
-            turn_on_shelly(shelly_ip)
-            pi_booted = boot_up_pi(nas_ip, nas_port)
+    (ovpn_bat := os.getenv("OVPN_CONNECT_BAT")) or raise_env_error("OVPN_CONNECT_BAT")
+
+    if connected_to_same_network(shelly_ip, shelly_mac):
+        print(f"{info_symbol} INSIDE local network or already connected to VPN")
+        status = "local"
+
+        if not verify_local_connection(nas_ip, nas_port, shelly_cloud_server, shelly_cloud_auth_key, shelly_device_id, shelly_ip):
+            raise RuntimeError(f"\033[31m{err_symbol} Raspberry Pi failed to boot up or NAS service cannot be reached \033[0m")
+                
     else:
-        turn_on_shelly(shelly_ip)
-        pi_booted = boot_up_pi(nas_ip, nas_port)
-        
-    if not pi_booted:
-        raise RuntimeError(f"\033[31m{err_symbol} NAS cannot be reached \033[0m")
+        print(f"\033[33m{warning_symbol} Not in local network, connecting to VPN... \033[0m")
+        status = "vpn"
 
-    # connect to Raspberry Pi NAS
+        if not verify_vpn_connection(ovpn_bat, nas_ip, nas_port, shelly_cloud_server, shelly_cloud_auth_key, shelly_device_id)
+            raise RuntimeError(f"\033[31m{err_symbol} VPN connection attempt failed \033[0m")
+
+    # register session to Raspberry Pi NAS
     (nas_username := os.getenv("SMB_USERNAME")) or raise_env_error("SMB_USERNAME")
     (nas_pwd := os.getenv("SMB_PWD")) or raise_env_error("SMB_PWD")
 
     register_session(nas_ip, username=nas_username, password=nas_pwd)
 
     if status == "local":
-        print(f"\033[32m{success_symbol} Registered to NAS \033[0m")
+        print(f"\033[32m{success_symbol} Registered session to NAS \033[0m")
     elif status == "vpn":
-        print(f"\033[32m{success_symbol} Registered to NAS via VPN \033[0m")
+        print(f"\033[32m{success_symbol} Registered session to NAS via VPN \033[0m")

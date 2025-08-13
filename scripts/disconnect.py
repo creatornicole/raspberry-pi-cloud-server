@@ -1,4 +1,5 @@
-from helpers import is_port_open, raise_env_error, shutdown_shelly
+from helpers import is_port_open, raise_env_error
+from shelly import shutdown_shelly
 from load_variables import load_variables
 import os
 import paramiko

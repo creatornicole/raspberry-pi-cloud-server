@@ -15,16 +15,3 @@ def is_port_open(ip: str, port: int) -> bool:
 def raise_env_error(var_name: str):
     _, err_symbol, _, _ = load_variables()
     raise EnvironmentError(f"\033[31m{err_symbol} {var_name} environment variable is not set \033[0m")
-
-def shutdown_shelly(ip: str):
-        """
-        """
-        url = f"http://{ip}/relay/0?turn=off"
-        try:
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                print(f"\033[32m{success_symbol} Shelly turned OFF successfully \033[0m")
-            else:
-                raise RuntimeError(f"\033[31m{err_symbol} Failed to turn off Shelly. Status code: {response.status_code} \033[0m")
-        except requests.RequestException as e:
-            raise ConnectionError(f"\033[31m{err_symbol} Error connecting to Shelly at {ip}: {e} \033[0m")
